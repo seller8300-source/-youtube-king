@@ -1,5 +1,6 @@
-// /api/generate  —  레퍼런스 대본의 말투·구조를 분석해 회사/제품 대본을 생성
-// API 키는 Vercel 환경변수(ANTHROPIC_API_KEY)에 저장 → 프론트에 절대 노출 안 됨
+// /api/generate — 궁금한마케팅 컨텐츠공장
+// USP 입력 → 캐릭터(페르소나) 선택 → 숏폼/롱폼 → [대본+고정카피+캡션+콘티] 출력
+// 이상한마케팅/자청 카피 공식을 엔진에 내장. API 키는 환경변수(ANTHROPIC_API_KEY)에 저장.
 
 const ALLOW = {
   "Access-Control-Allow-Origin": "*",
@@ -7,64 +8,78 @@ const ALLOW = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-function buildPrompt({ reference, company, format, persuasionMode }) {
+// 자료에서 추출한 6대 카피 공식 (모든 캐릭터 공통 베이스)
+const COPY_FORMULAS = `
+[카피 6대 공식 — 반드시 구조적으로 녹일 것]
+1) 권위의 법칙: 실적·숫자·전문가를 앞세워 신뢰 부여 (예: "현장 800곳이 쓰는", "조경업자가 자기 집에 쓰는")
+2) 숫자의 원칙: 막연한 형용사 대신 구체적 숫자 (예: "10년 안 삭는", "공기 30% 단축", "견적 300만원 절감")
+3) 상식 파괴(언매칭): 통념을 정반대로 뒤집기 (예: "비싼 게 오히려 싸다", "넓을수록 손해")
+4) 금지·위협: 손실 회피 자극 (예: "이거 모르면 3년 안에 버린다", "절대 두면 안 되는")
+5) 표본 넓히기: 좁은 제품을 넓은 욕망으로 치환 (예: 파고라→"집값 올리는 마당", 야외가구→"남들이 부러워하는 마당")
+6) 궁금증 갭: 답을 미루고 끝까지 보게 (예: "옆집 마당이 카페처럼 보이는 진짜 이유", "정체 공개합니다")
+`;
+
+// 캐릭터(페르소나) 4종 — 각자 어떤 공식을 세게 쓰는지가 다름
+const PERSONAS = {
+  yeri: {
+    name: "예리 마케터",
+    desc: "차분한 정보전달러",
+    voice: `감정을 빼고 팩트와 논리로 설득한다. 통념을 차분히 깨고, 핵심을 '딱 3가지'로 번호 매겨 정리하며, 숫자와 근거로 신뢰를 쌓는다. 강의하듯 또박또박. 6대 공식 중 [권위][숫자]를 특히 강하게 쓴다. 과장·자극은 절제.`,
+  },
+  jasung: {
+    name: "자수성 설계자",
+    desc: "썰 푸는 개념러",
+    voice: `하나의 강력한 개념을 잡고("돈 버는 사장 vs 못 버는 사장") 여러 사례로 증명하며 끝까지 끌고 간다. 친근한 반말체 섞인 입담. "내가 수백 명 봐왔는데" 식 경험 권위. 6대 공식 중 [표본 넓히기][궁금증 갭]을 강하게 쓴다.`,
+  },
+  doval: {
+    name: "도발이",
+    desc: "자존심 긁는 후킹러",
+    voice: `첫 1~2초에 강하게 도발한다. "이거 모르면 평생 손해", "99%가 하는 실수"처럼 자존심을 긁고 불안을 자극해 끝까지 보게 만든다. 텐션 높고 직설적. 6대 공식 중 [금지·위협][상식 파괴]를 가장 세게 쓴다.`,
+  },
+  gonggam: {
+    name: "공감이",
+    desc: "스토리텔러",
+    voice: `실패담·경험담으로 시작해 공감을 얻고 신뢰로 전환한다. "저도 예전에 이것 때문에 고생했는데…" 1인칭 서사. 솔직하고 따뜻한 톤. 진정성으로 USP를 자연스럽게 녹인다. 6대 공식 중 [궁금증 갭][권위(경험)]를 활용.`,
+  },
+};
+
+function buildPrompt({ biz, persona, format }) {
+  const p = PERSONAS[persona] || PERSONAS.doval;
+
   const lengthGuide =
     format === "short"
-      ? "숏폼(15~60초, 유튜브 쇼츠/릴스). 길이는 한글 350~600자 내외. 첫 1~2초에 시선을 잡는 강력한 후킹으로 시작."
-      : "롱폼(5~12분). 도입 후킹 → 본론 전개 → 마무리 CTA 구조. 챕터처럼 흐름이 보이게.";
+      ? `숏폼(15~25초, 쇼츠/릴스). 대본은 초단위로 끊어서(0~2초, 2~5초...) 작성. 첫 1~2초 후킹 필수.`
+      : `롱폼(5~10분). 6단계 흐름: ①후킹+타깃 ②권위(자기소개) ③통념 깨기 ④핵심 3가지 ⑤사례+숫자 ⑥행동유도(CTA). 실제 말하는 구어체.`;
 
-  if (persuasionMode) {
-    return `너는 한국 최고의 유튜브 대본 기획자다. 레퍼런스 영상이 없으므로, 시청자의 심리를 건드려 끝까지 보게 만들고 행동(문의/구매/저장)으로 이어지게 하는 설득 구조로 대본을 직접 기획한다.
+  return `너는 한국 최고의 바이럴 콘텐츠 기획자다. 아래 캐릭터의 말투로, 주어진 제품의 USP를 살려 콘텐츠를 만든다.
 
-## 활용할 심리 기법 (자연스럽게 녹여라, 기법 이름은 절대 노출하지 마라)
-- 후킹: 통념을 뒤집는 질문/주장, 손실 회피("이거 모르면 ~ 손해"), 호기심 갭
-- 신뢰: 구체적 숫자/사례로 가치 입증, 권위·실적 제시
-- 공감: 시청자가 겪는 진짜 고민을 콕 집어 말하기
-- 행동: 명확하고 부담 없는 다음 단계 제시(CTA)
+## 캐릭터
+【${p.name}】(${p.desc})
+${p.voice}
 
-## 길이/형식
-${lengthGuide}
+## 절대 규칙
+1. 제품의 USP(강점)는 반드시 콘텐츠 안에 명확히 담는다.
+2. 아래 6대 카피 공식을 구조적으로 녹인다. (공식 이름은 노출하지 말 것)
+3. USP에 있는 사실만 사용. 없는 수치·효능은 지어내지 마라.
+4. 어려운 한자어·업계 용어 금지. 쉬운 단어로. (시청자 뇌를 편하게)
 
-## 회사·제품 정보 (이 내용을 근거로만 작성. 없는 사실 지어내지 마라)
-${company}
-
-## 출력 형식
-1) [기획 의도] 2~3줄: 어떤 심리 포인트로 설계했는지
-2) [대본] 실제 말하는 그대로의 구어체 대본. 숏폼이면 장면/자막 표시도 함께.
-3) [썸네일·제목 후보] 3개
-
-한국어로, 바로 촬영에 쓸 수 있게 작성하라.`;
-  }
-
-  return `너는 한국 최고의 유튜브 대본 기획자다. 아래 [레퍼런스 대본]의 말투와 대본 구조를 정밀 분석한 뒤, 그 스타일 그대로 [회사·제품 정보]를 녹여 새 대본을 만든다.
-
-## 1단계: 레퍼런스 분석 (먼저 내부적으로 분석하고, 결과만 [스타일 분석]에 3~5줄로 요약)
-- 말투/어조 (반말·존댓말, 텐션, 말버릇, 호흡)
-- 후킹 방식 (어떻게 첫 문장으로 시선을 잡는가)
-- 전개 구조 (문제제기→해결, 리스트형, 스토리텔링 등)
-- 마무리/CTA 방식
-
-## 2단계: 같은 스타일로 회사/제품 대본 작성
-- 레퍼런스의 말투·리듬·구조를 그대로 모사하되, 내용은 회사/제품으로 교체
-- [회사·제품 정보]에 있는 사실만 사용. 없는 수치·효능 지어내지 마라.
+${COPY_FORMULAS}
 
 ## 길이/형식
 ${lengthGuide}
 
-## 레퍼런스 대본
-"""
-${reference}
-"""
+## 제품 정보 (USP)
+- 무엇을 파나: ${biz.what || "(미입력)"}
+- 타깃 고객: ${biz.who || "(미입력)"}
+- 차별점·강점: ${biz.diff || "(미입력)"}
+- 신뢰 근거(숫자·실적·후기): ${biz.proof || "(미입력)"}
+- 원하는 행동(CTA): ${biz.cta || "(미입력)"}
 
-## 회사·제품 정보
-"""
-${company}
-"""
-
-## 출력 형식
-1) [스타일 분석] 3~5줄
-2) [대본] 실제 말하는 구어체. 숏폼이면 장면/자막 표시 포함.
-3) [썸네일·제목 후보] 3개
+## 출력 형식 (반드시 이 4가지를 순서대로, 제목 라벨 포함)
+【고정카피】영상 위에 박을 한 줄. 15자 내외. 6대 공식 적용. 3개 후보 제시.
+【대본】${format === "short" ? "초단위로 끊어서" : "구어체로"} 작성. USP 포함.
+【캡션】업로드 본문. 핵심 정보 줄글 + 마지막에 CTA + 해시태그 5~7개.
+【영상 콘티】초단위 촬영 가이드(어떤 장면/자막/음악). ${format === "short" ? "0~2초부터" : "도입/본론/마무리 구간별로"}.
 
 한국어로, 바로 촬영에 쓸 수 있게 작성하라.`;
 }
@@ -72,27 +87,20 @@ ${company}
 module.exports = async (req, res) => {
   Object.entries(ALLOW).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "POST only" });
+  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey)
-    return res
-      .status(500)
-      .json({ error: "서버에 API 키가 설정되지 않았어요. (ANTHROPIC_API_KEY)" });
+    return res.status(500).json({ error: "서버에 API 키가 설정되지 않았어요. (ANTHROPIC_API_KEY)" });
 
   try {
-    const body =
-      typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
-    const { reference = "", company = "", format = "short" } = body;
+    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+    const { biz = {}, persona = "doval", format = "short" } = body;
 
-    if (!company.trim())
-      return res
-        .status(400)
-        .json({ error: "회사·제품 정보를 입력해 주세요." });
+    if (!biz.what || !String(biz.what).trim())
+      return res.status(400).json({ error: "최소한 '무엇을 파나요?'는 입력해 주세요." });
 
-    const persuasionMode = !reference.trim();
-    const prompt = buildPrompt({ reference, company, format, persuasionMode });
+    const prompt = buildPrompt({ biz, persona, format });
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -110,22 +118,18 @@ module.exports = async (req, res) => {
 
     if (!r.ok) {
       const errText = await r.text();
-      return res
-        .status(502)
-        .json({ error: "AI 생성에 실패했어요.", detail: errText.slice(0, 500) });
+      return res.status(502).json({ error: "AI 생성에 실패했어요.", detail: errText.slice(0, 500) });
     }
 
     const data = await r.json();
-    const script = (data.content || [])
+    const result = (data.content || [])
       .filter((b) => b.type === "text")
       .map((b) => b.text)
       .join("\n")
       .trim();
 
-    return res.status(200).json({ script, persuasionMode });
+    return res.status(200).json({ result, personaName: (PERSONAS[persona] || PERSONAS.doval).name });
   } catch (e) {
-    return res
-      .status(500)
-      .json({ error: "처리 중 오류가 발생했어요.", detail: String(e && e.message ? e.message : e) });
+    return res.status(500).json({ error: "처리 중 오류가 발생했어요.", detail: String(e && e.message ? e.message : e) });
   }
 };
