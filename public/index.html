@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>유튜브 기획의 왕</title>
+<meta name="description" content="따라하고 싶은 유튜브 영상의 말투와 구조 그대로, 우리 제품 대본을 만들어 드립니다." />
+<style>
+  :root{
+    --ink:#14110d; --paper:#f7f3ea; --card:#fffdf8; --line:#e4ddcd;
+    --gold:#c8962b; --gold-deep:#9a6f17; --maroon:#7a2222; --muted:#8a8270;
+    --shadow:0 1px 2px rgba(20,17,13,.05),0 8px 28px rgba(20,17,13,.07);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:0 20px}
+  header{padding:46px 0 30px; text-align:center}
+  .crown{font-size:13px; letter-spacing:.32em; color:var(--gold-deep); font-weight:700; text-transform:uppercase}
+  h1{font-size:34px; margin:12px 0 6px; letter-spacing:-.01em; font-weight:800}
+  .sub{color:var(--muted); font-size:15px; max-width:520px; margin:0 auto}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:24px; box-shadow:var(--shadow); margin-bottom:18px;
+  }
+  .step{display:flex; align-items:center; gap:10px; margin-bottom:14px}
+  .num{
+    width:26px; height:26px; flex:none; border-radius:50%; background:var(--ink); color:var(--paper);
+    display:grid; place-items:center; font-size:13px; font-weight:800;
+  }
+  .step h2{font-size:17px; margin:0; font-weight:700}
+  .hint{font-size:13px; color:var(--muted); margin:2px 0 12px 36px}
+  label.fld{display:block; font-size:13px; font-weight:700; color:var(--gold-deep); margin:14px 0 6px}
+  input[type=text], textarea{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    font:inherit; font-size:15px; background:#fff; color:var(--ink); resize:vertical;
+  }
+  input[type=text]:focus, textarea:focus{outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,150,43,.15)}
+  textarea{min-height:96px; line-height:1.6}
+  .row{display:flex; gap:10px; flex-wrap:wrap}
+  .row input[type=text]{flex:1; min-width:200px}
+  .btn{
+    border:none; border-radius:10px; padding:12px 18px; font:inherit; font-weight:700; font-size:15px;
+    cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .btn-ghost{background:#fff; border:1px solid var(--line); color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--gold); color:var(--gold-deep)}
+  .btn-gold{background:linear-gradient(180deg,var(--gold),var(--gold-deep)); color:#fff; box-shadow:0 4px 14px rgba(154,111,23,.28)}
+  .btn-gold:hover{filter:brightness(1.05)}
+  .btn-gold:disabled{opacity:.55; cursor:default; filter:none}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff}
+  .seg button{border:none; background:transparent; padding:10px 18px; font:inherit; font-weight:700; font-size:14px; cursor:pointer; color:var(--muted)}
+  .seg button.on{background:var(--ink); color:var(--paper)}
+  .pillrow{display:flex; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap}
+  .status{font-size:13px; padding:8px 12px; border-radius:8px; margin-top:10px}
+  .status.ok{background:#eef6ec; color:#2f6b2a}
+  .status.err{background:#fbecec; color:#9a2b2b}
+  .status.load{background:#f4eede; color:var(--gold-deep)}
+  .checkline{display:flex; align-items:flex-start; gap:9px; margin-top:14px; font-size:14px; color:var(--ink)}
+  .checkline input{margin-top:3px; width:17px; height:17px; accent-color:var(--gold-deep)}
+  .checkline .desc{font-size:12px; color:var(--muted)}
+  .out{white-space:pre-wrap; font-size:15px; line-height:1.75; background:#fffef9; border:1px dashed var(--line); border-radius:12px; padding:18px; min-height:60px}
+  .out:empty::before{content:"여기에 완성된 대본이 나옵니다."; color:var(--muted)}
+  .outhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+  .spin{display:inline-block; width:15px; height:15px; border:2px solid rgba(154,111,23,.3); border-top-color:var(--gold-deep); border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  footer{text-align:center; color:var(--muted); font-size:12px; padding:28px 0 50px}
+  .ex{font-size:12px; color:var(--gold-deep); cursor:pointer; text-decoration:underline; margin-left:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="crown">YouTube Script King</div>
+    <h1>유튜브 기획의 왕</h1>
+    <p class="sub">따라하고 싶은 영상의 말투와 구조 그대로, 우리 제품 대본으로 바꿔 드립니다.<br>레퍼런스가 없으면 심리 설득 구조로 직접 기획합니다.</p>
+  </header>
+
+  <!-- STEP 1 -->
+  <div class="card">
+    <div class="step"><div class="num">1</div><h2>따라하고 싶은 영상</h2></div>
+    <div class="hint">링크를 넣으면 자막을 자동으로 가져옵니다. 안 가져와지면 대본을 직접 붙여넣으세요.</div>
+    <label class="fld">유튜브 링크</label>
+    <div class="row">
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+      <button class="btn btn-ghost" id="fetchBtn">자막 가져오기</button>
+    </div>
+    <div id="fetchStatus"></div>
+    <label class="fld">레퍼런스 대본 <span style="color:var(--muted);font-weight:400">(자동 추출되거나, 직접 붙여넣기)</span></label>
+    <textarea id="reference" placeholder="여기에 따라하고 싶은 영상의 대본이 들어옵니다. 비워두면 심리 설득 구조로 직접 기획합니다."></textarea>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card">
+    <div class="step"><div class="num">2</div><h2>우리 회사·제품 정보</h2></div>
+    <div class="hint">제품 설명, 강점, 가치를 입증할 수 있는 자료(숫자·사례·후기)를 넣을수록 대본이 정확해집니다.
+      <span class="ex" id="exBtn">예시 채우기</span></div>
+    <textarea id="company" placeholder="예) 제품명, 핵심 강점, 가격, 타깃 고객, 실적 수치, 고객 후기 등"></textarea>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card">
+    <div class="step"><div class="num">3</div><h2>형식 선택 &amp; 생성</h2></div>
+    <div class="pillrow">
+      <span style="font-size:13px;font-weight:700;color:var(--gold-deep)">길이</span>
+      <div class="seg" id="seg">
+        <button data-f="short" class="on">숏폼</button>
+        <button data-f="long">롱폼</button>
+      </div>
+    </div>
+    <label class="checkline">
+      <input type="checkbox" id="forcePersuade" />
+      <span>레퍼런스 없이 심리 설득 구조로 기획하기
+        <span class="desc">체크하면 레퍼런스를 무시하고, 통념 깨기·손실 회피·CTA 등 설득 구조로 만듭니다.</span>
+      </span>
+    </label>
+    <div class="pillrow" style="margin-top:18px">
+      <button class="btn btn-gold" id="genBtn">대본 생성하기</button>
+    </div>
+    <div id="genStatus"></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card">
+    <div class="outhead">
+      <div class="step" style="margin:0"><div class="num" style="background:var(--gold-deep)">★</div><h2>완성 대본</h2></div>
+      <button class="btn btn-ghost" id="copyBtn" style="padding:8px 14px;font-size:13px">복사</button>
+    </div>
+    <div class="out" id="out"></div>
+  </div>
+
+  <footer>다다그룹 · 유튜브 기획의 왕 — 내부 마케팅 도구</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let format = "short";
+
+// 길이 선택
+$("seg").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...$("seg").children].forEach((x) => x.classList.remove("on"));
+  b.classList.add("on"); format = b.dataset.f;
+});
+
+// 예시 채우기 (스톤킴 톤)
+$("exBtn").addEventListener("click", () => {
+  $("company").value =
+`제품명: 스톤킴 소프트스톤 (프리미엄 인테리어 표면재)
+핵심 강점: 진짜 돌의 질감을 살린 표면재인데 무게는 1/5, 시공은 3배 빠름. 곡면 시공 가능.
+타깃: 인테리어 시공업체, 카페·매장 사장님
+가치 입증: 전국 시공 사례 800건 이상, 평균 시공기간 30% 단축, A/S 5년 보증
+차별점: 중국 직수입 대비 한국 큐레이션 품질, 색상 194종 보유
+고객 후기: "대리석인 줄 알았는데 만져보고 놀랐다", "시공이 진짜 빨라서 공기 단축됨"`;
+});
+
+// 자막 가져오기
+$("fetchBtn").addEventListener("click", async () => {
+  const url = $("url").value.trim();
+  const s = $("fetchStatus");
+  if (!url) { s.className = "status err"; s.textContent = "유튜브 링크를 입력해 주세요."; return; }
+  s.className = "status load"; s.innerHTML = '<span class="spin"></span>자막을 가져오는 중...';
+  $("fetchBtn").disabled = true;
+  try {
+    const r = await fetch("/api/transcript", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      s.className = "status err"; s.textContent = d.error || "가져오지 못했어요. 대본을 직접 붙여넣어 주세요.";
+    } else {
+      $("reference").value = d.transcript;
+      s.className = "status ok";
+      s.textContent = `자막을 가져왔어요${d.auto ? " (자동생성 자막)" : ""}. 글자 수 ${d.transcript.length.toLocaleString()}자.`;
+    }
+  } catch (e) {
+    s.className = "status err"; s.textContent = "네트워크 오류예요. 대본을 직접 붙여넣어 주세요.";
+  } finally { $("fetchBtn").disabled = false; }
+});
+
+// 대본 생성
+$("genBtn").addEventListener("click", async () => {
+  const company = $("company").value.trim();
+  const forceP = $("forcePersuade").checked;
+  const reference = forceP ? "" : $("reference").value.trim();
+  const s = $("genStatus");
+  if (!company) { s.className = "status err"; s.textContent = "회사·제품 정보를 입력해 주세요."; return; }
+  s.className = "status load"; s.innerHTML = '<span class="spin"></span>대본을 기획하는 중... (10~20초)';
+  $("genBtn").disabled = true; $("out").textContent = "";
+  try {
+    const r = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference, company, format }),
+    });
+    const d = await r.json();
+    if (!r.ok) { s.className = "status err"; s.textContent = d.error || "생성에 실패했어요."; }
+    else {
+      $("out").textContent = d.script;
+      s.className = "status ok";
+      s.textContent = d.persuasionMode ? "심리 설득 구조로 기획했어요." : "레퍼런스 스타일로 생성했어요.";
+    }
+  } catch (e) {
+    s.className = "status err"; s.textContent = "네트워크 오류가 발생했어요.";
+  } finally { $("genBtn").disabled = false; }
+});
+
+// 복사
+$("copyBtn").addEventListener("click", () => {
+  const t = $("out").textContent; if (!t) return;
+  navigator.clipboard.writeText(t).then(() => {
+    $("copyBtn").textContent = "복사됨!";
+    setTimeout(() => ($("copyBtn").textContent = "복사"), 1500);
+  });
+});
+</script>
+</body>
+</html>
