@@ -28,6 +28,14 @@
   textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink);resize:vertical;min-height:54px;line-height:1.5}
   textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,150,43,.15)}
   .ex{font-size:12px;color:var(--gold-deep);cursor:pointer;text-decoration:underline;margin-left:auto}
+  .brandbox{border:2px solid var(--red);border-radius:11px;padding:13px;margin:6px 0 6px;background:#fdf4f3}
+  .brandhead{font-size:13.5px;font-weight:800;color:var(--red);margin-bottom:9px}
+  .brandbtns{display:flex;align-items:center;gap:9px;margin-bottom:9px;flex-wrap:wrap}
+  .filebtn{display:inline-block;background:#fff;border:1.5px solid var(--red);color:var(--red);border-radius:8px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer}
+  .filebtn:hover{background:var(--red);color:#fff}
+  .filename{font-size:12.5px;color:var(--muted)}
+  .brandbox textarea{min-height:74px;border-color:#e6c5c2}
+  .brandbox textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(178,59,50,.13)}
   .chars{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:4px}
   .ch{border:1.5px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;background:#fff;transition:.14s}
   .ch:hover{border-color:var(--gold)}
@@ -81,8 +89,14 @@
     <div class="step"><div class="num">1</div><h2>내 제품 정보 (USP)</h2><span class="ex" id="exBtn">예시 채우기</span></div>
     <div class="hint">강점·숫자·실적을 넣을수록 카피가 강해져요.</div>
 
-    <label class="fld">📋 브랜드 자료 붙여넣기 <span style="color:var(--muted);font-weight:400">(선택 · 정리된 브랜드 소개가 있으면 여기에. 그럼 아래 5칸은 비워도 OK)</span></label>
-    <textarea id="brandDoc" placeholder="회사·브랜드·제품 소개 문서를 통째로 붙여넣으세요. AI가 알아서 읽고 뽑습니다." style="min-height:80px"></textarea>
+    <div class="brandbox">
+      <div class="brandhead">📋 정리된 브랜드 자료가 있나요? <span style="font-weight:400;color:var(--muted)">(선택 — 넣으면 5칸 비워도 OK)</span></div>
+      <div class="brandbtns">
+        <label class="filebtn">📎 파일 첨부<input type="file" id="brandFile" accept=".txt,.md,.docx,.csv" hidden /></label>
+        <span class="filename" id="fileName"></span>
+      </div>
+      <textarea id="brandDoc" placeholder="여기에 브랜드·제품 소개를 붙여넣거나, 위에서 파일을 첨부하세요. (메모장·워드 파일 OK)"></textarea>
+    </div>
 
     <label class="fld">① 무엇을 파나요?</label>
     <textarea id="what" placeholder="예) 프리미엄 야외가구·파고라 (다다스토어)"></textarea>
@@ -130,6 +144,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let format="short", persona="doval", rawResult="";
@@ -145,6 +160,26 @@ $("exBtn").addEventListener("click",()=>{
   $("diff").value="사계절 방수·자외선 견디는 소재, 설치·시공까지 한 번에, 곰팡이·변색 없음";
   $("proof").value="전국 1,200개 마당 시공, 10년 변색보증";
   $("cta").value="댓글에 '마당' 남기면 무료 컨설팅 안내";
+});
+
+// 파일 첨부 → 내용 읽어서 브랜드 칸 채우기
+$("brandFile").addEventListener("change", async (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const fn=$("fileName"); fn.textContent="읽는 중...";
+  try{
+    let text="";
+    if(f.name.toLowerCase().endsWith(".docx")){
+      const buf=await f.arrayBuffer();
+      const res=await mammoth.extractRawText({arrayBuffer:buf});
+      text=res.value;
+    }else{
+      text=await f.text(); // txt, md, csv
+    }
+    $("brandDoc").value=text.trim();
+    fn.textContent="✅ "+f.name+" ("+text.trim().length.toLocaleString()+"자)";
+  }catch(err){
+    fn.textContent="❌ 읽기 실패 — 내용을 직접 붙여넣어 주세요.";
+  }
 });
 
 async function generate(){
