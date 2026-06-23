@@ -70,6 +70,22 @@
   .out ul,.out ol{margin:6px 0;padding-left:20px}
   .out li{margin:3px 0}
   .out p{margin:7px 0}
+  .sec{border:1px solid var(--line);border-radius:12px;margin-bottom:11px;overflow:hidden;background:#fffef9}
+  .sechead{display:flex;align-items:center;gap:8px;background:#f4eede;padding:8px 13px;border-bottom:1px solid var(--line)}
+  .sectitle{font-size:13.5px;font-weight:800;color:var(--gold-deep)}
+  .secbtns{margin-left:auto;display:flex;gap:6px}
+  .secbtn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:11.5px;font-weight:700;color:var(--ink);cursor:pointer}
+  .secbtn:hover{border-color:var(--gold);color:var(--gold-deep)}
+  .secbody{padding:13px 15px;font-size:14px;line-height:1.7}
+  .secbody table{width:100%;border-collapse:collapse;margin:6px 0;font-size:12.5px}
+  .secbody th{background:#f4eede;text-align:left;padding:6px 8px;border:1px solid var(--line);font-weight:700;color:var(--gold-deep)}
+  .secbody td{padding:6px 8px;border:1px solid var(--line);vertical-align:top}
+  .secbody tr:nth-child(even) td{background:#fffdf6}
+  .secbody code{background:#f1ead9;padding:2px 6px;border-radius:5px;color:var(--red);font-weight:600}
+  .secbody blockquote{border-left:3px solid var(--gold);background:#faf4e6;margin:9px 0;padding:7px 11px;border-radius:0 7px 7px 0;font-size:12.5px;color:var(--muted)}
+  .secbody strong{font-weight:700}
+  .secbody ul,.secbody ol{margin:5px 0;padding-left:19px}
+  .secbody.loading{opacity:.5;position:relative}
   .outhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:8px;flex-wrap:wrap}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(154,111,23,.3);border-top-color:var(--gold-deep);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -133,12 +149,13 @@
   <div class="card">
     <div class="outhead">
       <div class="step" style="margin:0"><div class="num" style="background:var(--gold-deep)">★</div><h2>완성 콘텐츠</h2></div>
-      <button class="btn btn-ghost" id="copyBtn">복사</button>
+      <button class="btn btn-ghost" id="copyBtn">전체 복사</button>
     </div>
+    <div id="sections"></div>
     <div class="out" id="out"></div>
     <div class="retry" id="retry" style="display:none">
-      <button class="btn btn-ghost" id="regenBtn">🔄 같은 캐릭터로 다시</button>
-      <button class="btn btn-ghost" id="nextCharBtn">🎭 다른 캐릭터로 다시</button>
+      <button class="btn btn-ghost" id="regenBtn">🔄 전체 다시</button>
+      <button class="btn btn-ghost" id="nextCharBtn">🎭 다른 캐릭터로</button>
     </div>
   </div>
 
@@ -149,7 +166,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-let format="short", persona="doval", rawResult="";
+let format="short", persona="doval";
 
 $("seg").addEventListener("click",(e)=>{const b=e.target.closest("button");if(!b)return;
   [...$("seg").children].forEach(x=>x.classList.remove("on"));b.classList.add("on");format=b.dataset.f;});
@@ -192,31 +209,90 @@ const bb=$("brandBox");
 bb.addEventListener("drop",(e)=>{e.preventDefault();bb.classList.remove("drag");
   const f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) readBrandFile(f);});
 
-async function generate(){
+async function callAPI(section){
   const biz={brandDoc:$("brandDoc").value.trim(),what:$("what").value.trim(),who:$("who").value.trim(),diff:$("diff").value.trim(),proof:$("proof").value.trim(),cta:$("cta").value.trim()};
-  const s=$("genStatus");
-  if(!biz.what && !biz.brandDoc){s.className="status err";s.textContent="①'무엇을 파나요?'를 채우거나, 위에 브랜드 자료를 붙여넣어 주세요.";return;}
-  s.className="status load";s.innerHTML='<span class="spin"></span>카피 공식으로 콘텐츠를 뽑는 중... (15~25초)';
-  $("genBtn").disabled=true;$("out").innerHTML="";$("retry").style.display="none";
+  if(!biz.what && !biz.brandDoc){throw new Error("①'무엇을 파나요?'를 채우거나, 브랜드 자료를 붙여넣어 주세요.");}
+  const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({biz,persona,format,section})});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error||"생성에 실패했어요.");
+  return d;
+}
+
+// AI 결과(마크다운)를 섹션별로 쪼갬: "## 【제목】" 기준
+function splitSections(md){
+  const parts=md.split(/(?=^##\s*【)/m).filter(s=>s.trim());
+  const map={};
+  parts.forEach(p=>{
+    const m=p.match(/^##\s*【(.+?)】/);
+    if(!m) return;
+    const t=m[1];
+    let key=null;
+    if(t.includes("카피")) key="copy";
+    else if(t.includes("대본")) key="script";
+    else if(t.includes("캡션")) key="caption";
+    else if(t.includes("콘티")) key="conti";
+    if(key) map[key]={title:t, body:p};
+  });
+  return map;
+}
+
+const SEC_ORDER=["copy","script","caption","conti"];
+let sectionData={}; // key -> raw markdown
+
+function renderSections(){
+  const wrap=$("sections"); wrap.innerHTML="";
+  SEC_ORDER.forEach(key=>{
+    if(!sectionData[key]) return;
+    const {title,body}=sectionData[key];
+    const sec=document.createElement("div"); sec.className="sec";
+    sec.innerHTML=`<div class="sechead"><span class="sectitle">${title}</span>
+      <div class="secbtns">
+        <button class="secbtn" data-act="regen" data-key="${key}">🔄 이 부분만 다시</button>
+        <button class="secbtn" data-act="copy" data-key="${key}">복사</button>
+      </div></div>
+      <div class="secbody" data-body="${key}">${marked.parse(body.replace(/^##\s*【.+?】\s*/,''))}</div>`;
+    wrap.appendChild(sec);
+  });
+}
+
+async function regenSection(key){
+  const bodyEl=document.querySelector('.secbody[data-body="'+key+'"]');
+  if(bodyEl) bodyEl.classList.add("loading");
   try{
-    const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({biz,persona,format})});
-    const d=await r.json();
-    if(!r.ok){s.className="status err";s.textContent=d.error||"생성에 실패했어요.";}
-    else{
-      rawResult=d.result;
-      $("out").innerHTML=marked.parse(d.result);
-      s.className="status ok";
-      s.textContent="【"+d.personaName+"】 "+(format==="short"?"숏폼":"롱폼")+" 완성. 마음에 안 들면 다른 캐릭터로 바꿔보세요.";
-      $("retry").style.display="flex";
-    }
-  }catch(e){s.className="status err";s.textContent="네트워크 오류가 발생했어요.";}
+    const d=await callAPI(key);
+    const m=splitSections(d.result);
+    if(m[key]){ sectionData[key]=m[key]; renderSections(); }
+  }catch(e){ alert(e.message); }
+}
+
+$("sections").addEventListener("click",(e)=>{
+  const b=e.target.closest(".secbtn"); if(!b) return;
+  const key=b.dataset.key;
+  if(b.dataset.act==="regen") regenSection(key);
+  else if(b.dataset.act==="copy"){
+    const raw=sectionData[key]?sectionData[key].body.replace(/^##\s*【.+?】\s*/,''):"";
+    navigator.clipboard.writeText(raw).then(()=>{b.textContent="복사됨!";setTimeout(()=>b.textContent="복사",1200);});
+  }
+});
+
+async function generate(){
+  const s=$("genStatus");
+  s.className="status load";s.innerHTML='<span class="spin"></span>카피 공식으로 콘텐츠를 뽑는 중... (15~25초)';
+  $("genBtn").disabled=true;$("sections").innerHTML="";$("out").innerHTML="";$("retry").style.display="none";
+  try{
+    const d=await callAPI(null);
+    sectionData=splitSections(d.result);
+    renderSections();
+    s.className="status ok";
+    s.textContent="【"+d.personaName+"】 "+(format==="short"?"숏폼":"롱폼")+" 완성. 각 칸의 '이 부분만 다시'로 부분만 바꿀 수 있어요.";
+    $("retry").style.display="flex";
+  }catch(e){s.className="status err";s.textContent=e.message;}
   finally{$("genBtn").disabled=false;}
 }
 $("genBtn").addEventListener("click",generate);
 $("regenBtn").addEventListener("click",generate);
 
-// 다른 캐릭터로 다시 — 다음 캐릭터로 카드 선택을 옮기고 생성
 const PERSONA_ORDER=["doval","yeri","jasung","gonggam"];
 $("nextCharBtn").addEventListener("click",()=>{
   const i=PERSONA_ORDER.indexOf(persona);
@@ -228,8 +304,10 @@ $("nextCharBtn").addEventListener("click",()=>{
   generate();
 });
 
-$("copyBtn").addEventListener("click",()=>{if(!rawResult)return;
-  navigator.clipboard.writeText(rawResult).then(()=>{$("copyBtn").textContent="복사됨!";setTimeout(()=>$("copyBtn").textContent="복사",1500);});});
+$("copyBtn").addEventListener("click",()=>{
+  const all=SEC_ORDER.filter(k=>sectionData[k]).map(k=>sectionData[k].body).join("\n\n");
+  if(!all)return;
+  navigator.clipboard.writeText(all).then(()=>{$("copyBtn").textContent="복사됨!";setTimeout(()=>$("copyBtn").textContent="전체 복사",1500);});});
 </script>
 </body>
 </html>
