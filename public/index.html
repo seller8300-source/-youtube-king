@@ -45,8 +45,22 @@
   .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink);padding:7px 13px;font-size:12.5px;font-weight:700}
   .status{font-size:12.5px;padding:9px 12px;border-radius:8px;margin-top:11px}
   .status.ok{background:#eef6ec;color:#2f6b2a}.status.err{background:#fbecec;color:#9a2b2b}.status.load{background:#f4eede;color:var(--gold-deep)}
-  .out{white-space:pre-wrap;font-size:14.5px;line-height:1.75;background:#fffef9;border:1px dashed var(--line);border-radius:12px;padding:17px;min-height:50px}
+  .out{font-size:14.5px;line-height:1.75;background:#fffef9;border:1px dashed var(--line);border-radius:12px;padding:17px;min-height:50px}
   .out:empty::before{content:"여기에 [고정카피·대본·캡션·콘티]가 한 번에 나옵니다.";color:var(--muted)}
+  .out h2{font-size:16px;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--gold);color:var(--gold-deep)}
+  .out h2:first-child{margin-top:0}
+  .out h3{font-size:14.5px;margin:14px 0 6px;color:var(--ink)}
+  .out table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:13px}
+  .out th{background:#f4eede;text-align:left;padding:7px 9px;border:1px solid var(--line);font-weight:700;color:var(--gold-deep)}
+  .out td{padding:7px 9px;border:1px solid var(--line);vertical-align:top}
+  .out tr:nth-child(even) td{background:#fffdf6}
+  .out code{background:#f1ead9;padding:2px 6px;border-radius:5px;font-size:13px;color:var(--red);font-weight:600}
+  .out strong{font-weight:700}
+  .out blockquote{border-left:3px solid var(--gold);background:#faf4e6;margin:12px 0;padding:9px 13px;border-radius:0 8px 8px 0;font-size:13px;color:var(--muted)}
+  .out hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+  .out ul,.out ol{margin:6px 0;padding-left:20px}
+  .out li{margin:3px 0}
+  .out p{margin:7px 0}
   .outhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:8px;flex-wrap:wrap}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(154,111,23,.3);border-top-color:var(--gold-deep);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -66,6 +80,10 @@
   <div class="card">
     <div class="step"><div class="num">1</div><h2>내 제품 정보 (USP)</h2><span class="ex" id="exBtn">예시 채우기</span></div>
     <div class="hint">강점·숫자·실적을 넣을수록 카피가 강해져요.</div>
+
+    <label class="fld">📋 브랜드 자료 붙여넣기 <span style="color:var(--muted);font-weight:400">(선택 · 정리된 브랜드 소개가 있으면 여기에. 그럼 아래 5칸은 비워도 OK)</span></label>
+    <textarea id="brandDoc" placeholder="회사·브랜드·제품 소개 문서를 통째로 붙여넣으세요. AI가 알아서 읽고 뽑습니다." style="min-height:80px"></textarea>
+
     <label class="fld">① 무엇을 파나요?</label>
     <textarea id="what" placeholder="예) 프리미엄 야외가구·파고라 (다다스토어)"></textarea>
     <label class="fld">② 누구한테 파나요?</label>
@@ -111,9 +129,10 @@
   <footer>다다그룹 · 궁금한마케팅 컨텐츠공장</footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-let format="short", persona="doval";
+let format="short", persona="doval", rawResult="";
 
 $("seg").addEventListener("click",(e)=>{const b=e.target.closest("button");if(!b)return;
   [...$("seg").children].forEach(x=>x.classList.remove("on"));b.classList.add("on");format=b.dataset.f;});
@@ -129,27 +148,31 @@ $("exBtn").addEventListener("click",()=>{
 });
 
 async function generate(){
-  const biz={what:$("what").value.trim(),who:$("who").value.trim(),diff:$("diff").value.trim(),proof:$("proof").value.trim(),cta:$("cta").value.trim()};
+  const biz={brandDoc:$("brandDoc").value.trim(),what:$("what").value.trim(),who:$("who").value.trim(),diff:$("diff").value.trim(),proof:$("proof").value.trim(),cta:$("cta").value.trim()};
   const s=$("genStatus");
-  if(!biz.what){s.className="status err";s.textContent="최소한 ①'무엇을 파나요?'는 입력해 주세요.";return;}
+  if(!biz.what && !biz.brandDoc){s.className="status err";s.textContent="①'무엇을 파나요?'를 채우거나, 위에 브랜드 자료를 붙여넣어 주세요.";return;}
   s.className="status load";s.innerHTML='<span class="spin"></span>카피 공식으로 콘텐츠를 뽑는 중... (15~25초)';
-  $("genBtn").disabled=true;$("out").textContent="";$("retry").style.display="none";
+  $("genBtn").disabled=true;$("out").innerHTML="";$("retry").style.display="none";
   try{
     const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({biz,persona,format})});
     const d=await r.json();
     if(!r.ok){s.className="status err";s.textContent=d.error||"생성에 실패했어요.";}
-    else{$("out").textContent=d.result;s.className="status ok";
+    else{
+      rawResult=d.result;
+      $("out").innerHTML=marked.parse(d.result);
+      s.className="status ok";
       s.textContent="【"+d.personaName+"】 "+(format==="short"?"숏폼":"롱폼")+" 완성. 마음에 안 들면 다른 캐릭터로 바꿔보세요.";
-      $("retry").style.display="flex";}
+      $("retry").style.display="flex";
+    }
   }catch(e){s.className="status err";s.textContent="네트워크 오류가 발생했어요.";}
   finally{$("genBtn").disabled=false;}
 }
 $("genBtn").addEventListener("click",generate);
 $("regenBtn").addEventListener("click",generate);
 
-$("copyBtn").addEventListener("click",()=>{const t=$("out").textContent;if(!t)return;
-  navigator.clipboard.writeText(t).then(()=>{$("copyBtn").textContent="복사됨!";setTimeout(()=>$("copyBtn").textContent="복사",1500);});});
+$("copyBtn").addEventListener("click",()=>{if(!rawResult)return;
+  navigator.clipboard.writeText(rawResult).then(()=>{$("copyBtn").textContent="복사됨!";setTimeout(()=>$("copyBtn").textContent="복사",1500);});});
 </script>
 </body>
 </html>
