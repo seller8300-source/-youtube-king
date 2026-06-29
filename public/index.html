@@ -81,7 +81,10 @@
   .secbody th{background:#f4eede;text-align:left;padding:6px 8px;border:1px solid var(--line);font-weight:700;color:var(--gold-deep)}
   .secbody td{padding:6px 8px;border:1px solid var(--line);vertical-align:top}
   .secbody tr:nth-child(even) td{background:#fffdf6}
-  .secbody code{background:#f1ead9;padding:2px 6px;border-radius:5px;color:var(--red);font-weight:600}
+  .secbody code{background:#f1ead9;padding:3px 9px;border-radius:6px;color:var(--red);font-weight:700;font-size:15px}
+  .secbody ol{margin:8px 0;padding-left:24px}
+  .secbody ol li{margin:8px 0;font-size:14.5px}
+  .secbody h3{font-size:14px;margin:14px 0 6px;color:var(--gold-deep)}
   .secbody blockquote{border-left:3px solid var(--gold);background:#faf4e6;margin:9px 0;padding:7px 11px;border-radius:0 7px 7px 0;font-size:12.5px;color:var(--muted)}
   .secbody strong{font-weight:700}
   .secbody ul,.secbody ol{margin:5px 0;padding-left:19px}
@@ -103,7 +106,7 @@
 
   <!-- STEP 1: USP -->
   <div class="card">
-    <div class="step"><div class="num">1</div><h2>내 제품 정보 (USP)</h2><span class="ex" id="exBtn">예시 채우기</span></div>
+    <div class="step"><div class="num">1</div><h2>내 제품 정보 (USP)</h2><span class="ex" id="clearBtn" style="color:var(--red);margin-left:auto">🗑 전부 삭제</span><span class="ex" id="exBtn" style="margin-left:10px">예시 채우기</span></div>
     <div class="hint">강점·숫자·실적을 넣을수록 카피가 강해져요.</div>
 
     <div class="brandbox" id="brandBox">
@@ -167,6 +170,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 let format="short", persona="doval";
+let sectionData={};
 
 $("seg").addEventListener("click",(e)=>{const b=e.target.closest("button");if(!b)return;
   [...$("seg").children].forEach(x=>x.classList.remove("on"));b.classList.add("on");format=b.dataset.f;});
@@ -179,6 +183,19 @@ $("exBtn").addEventListener("click",()=>{
   $("diff").value="사계절 방수·자외선 견디는 소재, 설치·시공까지 한 번에, 곰팡이·변색 없음";
   $("proof").value="전국 1,200개 마당 시공, 10년 변색보증";
   $("cta").value="댓글에 '마당' 남기면 무료 컨설팅 안내";
+});
+
+// 전부 삭제 — 입력·파일·결과 전부 초기화
+$("clearBtn").addEventListener("click",()=>{
+  ["brandDoc","what","who","diff","proof","cta"].forEach(id=>$(id).value="");
+  $("brandFile").value="";
+  $("fileName").textContent="또는 파일을 이 박스로 끌어다 놓으세요";
+  $("sections").innerHTML="";
+  $("out").innerHTML="";
+  $("retry").style.display="none";
+  $("genStatus").className="";$("genStatus").textContent="";
+  sectionData={};
+  window.scrollTo({top:0,behavior:"smooth"});
 });
 
 // 파일 내용 읽어서 브랜드 칸 채우기 (첨부 + 드래그 공용)
@@ -238,8 +255,6 @@ function splitSections(md){
 }
 
 const SEC_ORDER=["copy","script","caption","conti"];
-let sectionData={}; // key -> raw markdown
-
 function renderSections(){
   const wrap=$("sections"); wrap.innerHTML="";
   SEC_ORDER.forEach(key=>{
